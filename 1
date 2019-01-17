@@ -1,0 +1,98 @@
+#include "stdafx.h"
+#include <iostream>
+#include <boost/filesystem.hpp>
+
+using namespace boost::filesystem;
+using namespace std;
+
+/*Расширение файла с финансовой информацией*/
+#define fin_file_ext ".txt"
+/*Длина имени файла с финансовой информацией*/
+#define fin_file_full_name_len 29
+/*Первая часть имени файла с финансовой информацией*/
+#define fin_file_first_part_name "balance_"
+
+/*Итерации по всем файлам и вложенным директориям*/
+bool show_file(boost::filesystem::path curr_path) 
+{
+
+	int files_count = 0;
+	string account;
+	string lastdate;
+
+	for (directory_entry& x : directory_iterator{ curr_path })  //перебор с помощью итератора в текущем каталоге
+	{
+		if (is_directory(x.path())) 
+		{
+			//Если текущий элемент является каталогом, то переходим в него
+			show_file(x.path());
+		}
+		else 
+		{
+			if (is_regular_file(x.path())) 
+			{
+				//Определение файла с финансовой информацией
+				if ((x.path().filename().size() == fin_file_full_name_len) &&
+					(x.path().filename().extension() == fin_file_ext) &&
+					(x.path().filename().string().find(fin_file_first_part_name, 0) == 0)) {
+
+					if (files_count == 0) 
+					{
+						//Получение номера счета из имени файла
+						account = x.path().filename().string().substr(8, 8);
+						//Получение даты из имени файла
+						lastdate = x.path().filename().string().substr(17, 8);
+					}
+					cout << " " << x.path().parent_path().leaf() << "  " << x.path().filename() << std::endl;       //leaf - последний в имении
+					//Сравнение дат
+					if (lastdate < x.path().filename().string().substr(17, 8)) 
+					{
+						lastdate = x.path().filename().string().substr(17, 8);
+					}
+					//Увеличение количества файлов с финансовой информацией
+					files_count++;
+				}
+			}
+		}
+	}
+
+	//Если были файлы с финансовой информацией, то выводим необходимую информацию
+	if (files_count != 0) {
+		cout << "broker: " << curr_path.filename()
+			<< " account: " << account
+			<< " files: " << files_count
+			<< " lastdate: " << lastdate << endl;
+	}
+	return false;
+}
+
+int main(int argc, char*argv[]) //Первый входной параметр задает путь к каталогу		
+{
+	boost::filesystem::path path_to_ftp = ".";
+
+	//Проверка количества входных параметров
+	if (argc > 2) 
+	{
+		cout << "Invalid input params" << endl;
+		return 1;
+	}
+
+	//Обработка первого входного параметра, если он есть
+	if ((argc == 2)) 
+	{
+		//Если путь к каталогу не существует, то завершение программы
+		if ((exists(argv[1])) && (is_directory(argv[1]))) 
+		{
+			path_to_ftp = argv[1];
+		}
+		else 
+		{
+			cout << "Path " << argv[1] << " not exist or to file" << endl;
+			return 1;
+		}
+	}
+
+	show_file(path_to_ftp);
+
+	return 0;
+}
